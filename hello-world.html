@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+	<meta charset="utf-8">
+	<title>BarChartD3</title>
+</head>
+<style type="text/css">
+	.axis text {
+	  font: 10px sans-serif;
+	}
+	
+	.axis path,
+	.axis line {
+	  fill: none;
+	  stroke: #000;
+	  shape-rendering: crispEdges;
+	}
+</style>
+<body>
+	<script type="text/javascript" src="d3.min.js" charset="utf-8"></script>
+	<script type="text/javascript">
+	var data;
+
+	d3.json("GDP-data.json", function(error, json) {
+	  if (error) return console.warn(error);
+	  data = json;
+	  visualizeIt();
+	});
+	function visualizeIt() {
+		let format = d3.time.format('%Y-%m-%d'),
+			margin = {top: 200, right: 200, bottom: 200, left: 200},
+			width = window.innerWidth, 
+			height = window.innerHeight;
+		for (let i in data.data) {
+			data.data[i][0] = format.parse(data.data[i][0]);
+		}
+		let xScale = d3.time.scale()
+						.domain([d3.time.year(format.parse(data.from_date)),
+								d3.time.year.offset(d3.time.year(format.parse(data.to_date)),1)])
+						.range([0, width - margin.left - margin.right]);
+		let yScale = d3.scale.linear()
+						.domain([d3.max(data.data.map(function (d) {return d[1];})),0])
+						.range([0, height - margin.top - margin.bottom]);
+		let svg = d3.select('body')
+						.append('svg')
+						.attr({
+							'width': width,
+							'height': height,
+						})
+					.append('g')
+						.attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
+		///it is to be noted that directly translate svg does not work for Chrome, but appending a 'g' before translation works.
+		let xAxis = d3.svg.axis()
+						.scale(xScale)
+						.ticks(d3.time.years, 2)
+						.orient('bottom');
+		let yAxis = d3.svg.axis()
+						.scale(yScale)
+						.orient('left');
+		let offsetXAxis = height-margin.top - margin.bottom;
+		svg.append('g')
+			.attr('class','x axis')
+			.attr('transform','translate(0,'+ offsetXAxis +')')
+			.call(xAxis);
+		svg.append('g')
+			.attr('class','y axis')
+			.call(yAxis);
+		svg.selectAll('.bar')
+				.data(data.data)
+			.enter().append('rect')
+				.attr('class','bar')
+				.attr('x',function(d){return xScale(d[0]);})
+				.attr('y', function(d){return height - margin.top - margin.bottom;})
+				.attr('fill','blue')
+				.attr('width',(width - margin.left - margin.right)/data.data.length)
+				.attr('height',0);
+		///since the bar is drawn from top to bottom, you need to transition two properties.		
+		svg.selectAll('.bar')
+			.transition()
+			.duration(1000) //the duration change will bring very desirable animation!!
+			.ease('elastic')
+			.delay(function(d, i) {return i*2;})
+			.attr('height', function(d){return height - yScale(d[1]) - margin.top - margin.bottom;})
+			.attr('y',function(d) {return yScale(d[1]);})
+
+	}
+	</script>
+</body>
+
+</html>
