@@ -19,7 +19,7 @@
 <body>
 	<script type="text/javascript" src="d3.min.js" charset="utf-8"></script>
 	<script type="text/javascript">
-	var data;
+
 	d3.json("GDP-data.json", function(error, json) {
 	  if (error) return console.warn(error);
 	  data = json;
@@ -43,6 +43,7 @@
 		let colorScale = d3.scale.linear()
 						.domain([0,data.data.length*0.33, data.data.length*0.66, data.data.length])
 						.range(['#e63946','#a8dadc','#457b9d','#1d3557']);
+
 		let svg = d3.select('body')
 						.append('svg')
 						.attr({
@@ -84,8 +85,10 @@
 			.delay(function(d, i) {return i*2;})
 			.attr('height', function(d){return height - yScale(d[1]) - margin.top - margin.bottom;})
 			.attr('y',function(d) {return yScale(d[1]);})
+
 	}
 	</script>
 </body>
 
 </html>
+
