@@ -15,6 +15,9 @@
 	  stroke: #000;
 	  shape-rendering: crispEdges;
 	}
+	.area {
+		fill: url(#areaGradientFill);
+	}
 </style>
 <body>
 	<script type="text/javascript" src="d3.min.js" charset="utf-8"></script>
@@ -61,6 +64,26 @@
 						.scale(yScale)
 						.orient('left');
 		let offsetXAxis = height-margin.top - margin.bottom;
+	  
+	  svg.append('defs')
+	  		.append("linearGradient")
+			.attr("id", "areaGradientFill")
+			.attr("gradientUnits", "userSpaceOnUse")
+			.attr("x1", 0)
+			.attr("y1", height - margin.top - margin.bottom)
+			.attr("x2", width - margin.left - margin.right)
+			.attr("y2", height - margin.top - margin.bottom)
+		.selectAll("stop")
+			.data([
+			{offset: "0%", color: "#e63946"},
+			{offset: "33%", color: "#a8dadc"},
+			{offset: "66%", color: "#457b9d"},
+			{offset: "100%", color: "#1d3557"}
+			])
+			.enter().append("stop")
+			.attr("offset", function(d) { return d.offset; })
+			.attr("stop-color", function(d) { return d.color; });
+	      
 		svg.append('g')
 			.attr('class','x axis')
 			.attr('transform','translate(0,'+ offsetXAxis +')')
@@ -84,8 +107,17 @@
 			.ease('elastic')
 			.delay(function(d, i) {return i*2;})
 			.attr('height', function(d){return height - yScale(d[1]) - margin.top - margin.bottom;})
-			.attr('y',function(d) {return yScale(d[1]);})
-
+			.attr('y',function(d) {return yScale(d[1]);});
+		
+		/*transition to area chart*/
+		let area = d3.svg.area()
+						.x(function(d) {return xScale(d[0]);})
+						.y0(height-margin.top-margin.bottom)
+						.y1(function(d) {return yScale(d[1]);});
+		svg.append('path')
+			.datum(data.data)
+			.attr('class', 'area')
+			.attr('d',area);
 	}
 	</script>
 </body>
