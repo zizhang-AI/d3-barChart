@@ -52,6 +52,15 @@
 						.domain([d3.time.year(format.parse(data.from_date)),
 								d3.time.year.offset(d3.time.year(format.parse(data.to_date)),1)])
 						.range([0, width - margin.left - margin.right]);
+		// range band
+		// note that the array using this function is [0, length-1], exactly what you want
+		// The problem is that it does not match with the time scale
+		// you have to use minDate = new Date(data.fromDate)
+		// let xOrdinalScale = d3.scale.ordinal()
+		// 						.domain(d3.range(0,data.data.length,1))
+		// 						.rangeBands([0, width - margin.left - margin.right], -0.1);
+		console.log(d3.range(0,data.data.length,1));
+		console.log("I'm loving it");
 		let yScale = d3.scale.linear()
 						.domain([d3.max(data.data.map(function (d) {return d[1];})),0])
 						.range([0, height - margin.top - margin.bottom]);
@@ -135,7 +144,7 @@
 			.datum(data.data)
 			.attr('class','line')
 			.attr('d',line);
-		let t = d3.transition().duration(4000);
+		let t = d3.transition().duration(1000).ease('bounce');
 
 		area = d3.svg.area()
 						// .interpolate('monotone')
@@ -145,13 +154,25 @@
 
 		t.selectAll('.area')
 			.attr('d',area);
+		line = d3.svg.line()
+						// .interpolate('monotone')
+						.x(function(d){return xScale(d[0]);})
+						.y(height - margin.top - margin.bottom);
+		t.selectAll('.line')
+			.attr('d',line);
 		svg.append('g')
 			.attr('class','x axis')
 			.attr('transform','translate(0,'+ offsetXAxis +')')
 			.call(xAxis);
 		svg.append('g')
 			.attr('class','y axis')
-			.call(yAxis);
+			.call(yAxis)
+			.append('text')
+			.attr('transform','rotate(-90)')
+			.attr('y',6)
+			.attr('dy', '.71em')
+			.style('text-anchor','end')
+			.text('GDP');
 		
 	}
 	</script>
