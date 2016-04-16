@@ -5,10 +5,12 @@
 	<title>BarChartD3</title>
 </head>
 <style type="text/css">
+	#header {
+		text-align: center;
+	}
 	.axis text {
 	  font: 10px sans-serif;
 	}
-	
 	.axis path,
 	.axis line {
 	  fill: none;
@@ -17,9 +19,19 @@
 	}
 	.area {
 		fill: url(#areaGradientFill);
+		stroke-width: 0;
+	}
+	.line {
+		fill: none;
+		stroke-width: 2px;
+		stroke: black;
 	}
 </style>
 <body>
+	<section id='header'>
+		<h1>US GDP</h1>
+		<button>ShowOtherChart</button>
+	</section>
 	<script type="text/javascript" src="d3.min.js" charset="utf-8"></script>
 	<script type="text/javascript">
 
@@ -84,13 +96,7 @@
 			.attr("offset", function(d) { return d.offset; })
 			.attr("stop-color", function(d) { return d.color; });
 	      
-		svg.append('g')
-			.attr('class','x axis')
-			.attr('transform','translate(0,'+ offsetXAxis +')')
-			.call(xAxis);
-		svg.append('g')
-			.attr('class','y axis')
-			.call(yAxis);
+
 		svg.selectAll('.bar')
 				.data(data.data)
 			.enter().append('rect')
@@ -111,13 +117,42 @@
 		
 		/*transition to area chart*/
 		let area = d3.svg.area()
+						// .interpolate('monotone')
 						.x(function(d) {return xScale(d[0]);})
 						.y0(height-margin.top-margin.bottom)
 						.y1(function(d) {return yScale(d[1]);});
 		svg.append('path')
 			.datum(data.data)
-			.attr('class', 'area')
+			.attr('class','area')
+			// .style('fill', 'url(#areaGradientFill)') //this also works
 			.attr('d',area);
+			
+		let line = d3.svg.line()
+						// .interpolate('monotone')
+						.x(function(d){return xScale(d[0]);})
+						.y(function(d){return yScale(d[1]);});
+		svg.append('path')
+			.datum(data.data)
+			.attr('class','line')
+			.attr('d',line);
+		let t = d3.transition().duration(4000);
+
+		area = d3.svg.area()
+						// .interpolate('monotone')
+						.x(function(d) {return xScale(d[0]);})
+						.y0(height-margin.top-margin.bottom)
+						.y1(height-margin.top-margin.bottom);
+
+		t.selectAll('.area')
+			.attr('d',area);
+		svg.append('g')
+			.attr('class','x axis')
+			.attr('transform','translate(0,'+ offsetXAxis +')')
+			.call(xAxis);
+		svg.append('g')
+			.attr('class','y axis')
+			.call(yAxis);
+		
 	}
 	</script>
 </body>
