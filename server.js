@@ -37,7 +37,7 @@ function streamFile(filepath) {
 function webserver(req, res) {
 
 	let baseURI = url.parse(req.url);
-	let filepath = __dirname + (baseURI.pathname === '/'? '/index.htm':baseURI.pathname);
+	let filepath = __dirname + (baseURI.pathname === '/'? '/index_noTransition.htm':baseURI.pathname);
 	let contentType = mimes[path.extname(filepath)]; 
 
 	fileAccess(filepath)

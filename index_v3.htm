@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en-us">
+<head>
+	<meta charset="utf-8">
+	<title>BarChartD3</title>
+	<script type="text/javascript" src="d3.min.js" charset="utf-8"></script>
+	<script src="https://ajax.aspnetcdn.com/ajax/jQuery/jquery-1.12.3.min.js"></script>
+</head>
+<style type="text/css">
+	#header {
+		text-align: center;
+	}
+	.axis text {
+		font: 10px sans-serif;
+	}
+	.axis path,
+	.axis line {
+		fill:            none;
+		stroke:          #000;
+		shape-rendering: crispEdges;
+	}
+	.area {
+		fill:         url(#areaGradientFill);
+		stroke-width: 0;
+	}
+	.line {
+		fill:         none;
+		stroke-width: 2px;
+		stroke:       black;
+	}
+</style>
+<body>
+	<section id='header'>
+		<h1>US GDP</h1>
+		<button id='toggleButton'>ShowOtherChart</button>
+	</section>
+	<script type="text/javascript">
+	d3.json("GDP-data.json", function(error, json) {
+	  if (error) return console.warn(error);
+	  visualizeIt(json);
+	});
+
+	function barAreaChart(){
+		let data = {},
+			margin = {top: 200, right: 200, bottom: 200, left: 200},
+			width = window.innerWidth, 
+			height = window.innerHeight;
+		let switchtoArea, switchtoBar;
+
+		function endall(transition, callback) { 
+			if (transition.size() === 0) { callback() }
+			let n = 0; 
+				transition 
+				    .each(function() { ++n; }) 
+				    .each("end", function() { if (!--n) callback(); }); 
+		} 
+		function chart(selection) {
+			selection.each(function(){
+			let format = d3.time.format('%Y-%m-%d');
+
+			for (let i in data.data) {
+				data.data[i][0] = format.parse(data.data[i][0]);
+			}
+			let xScale = d3.time.scale()
+							.domain([d3.time.year(format.parse(data.from_date)),
+									d3.time.year.offset(
+									d3.time.year(format.parse(data.to_date)),1)])
+							.range([0, width - margin.left - margin.right]);
+
+			let yScale = d3.scale.linear()
+							.domain([d3.max(data.data.map(function (d) {return d[1];})),0])
+							.range([0, height - margin.top - margin.bottom]);
+			let colorScale = d3.scale.linear()
+							.domain([0,data.data.length*0.33, data.data.length*0.66,
+									 data.data.length])
+							.range(['#e63946','#a8dadc','#457b9d','#1d3557']);
+
+			let svg = d3.select(this)
+							.append('svg')
+							.attr({
+								'width': width,
+								'height': height,
+							})
+						.append('g')
+							.attr('transform', 
+								  'translate(' + margin.left + ',' + margin.top + ')');
+
+			let xAxis = d3.svg.axis()
+							.scale(xScale)
+							.ticks(d3.time.years, 2)
+							.orient('bottom');
+			let yAxis = d3.svg.axis()
+							.scale(yScale)
+							.orient('left');
+			let offsetXAxis = height-margin.top - margin.bottom;
+		  
+			svg.append('defs')
+		  		.append("linearGradient")
+				.attr("id", "areaGradientFill")
+				.attr("gradientUnits", "userSpaceOnUse")
+				.attr("x1", 0)
+				.attr("y1", height - margin.top - margin.bottom)
+				.attr("x2", width - margin.left - margin.right)
+				.attr("y2", height - margin.top - margin.bottom)
+			.selectAll("stop")
+				.data([
+				{offset: "0%", color: "#e63946"},
+				{offset: "33%", color: "#a8dadc"},
+				{offset: "66%", color: "#457b9d"},
+				{offset: "100%", color: "#1d3557"}
+				])
+				.enter().append("stop")
+				.attr("offset", function(d) { return d.offset; })
+				.attr("stop-color", function(d) { return d.color; });
+		      
+
+			svg.selectAll('.bar')
+					.data(data.data)
+				.enter().append('rect')
+					.attr('class','bar')
+					.attr('x',function(d){return xScale(d[0]);})
+					.attr('y', function(d){return height - margin.top - margin.bottom;})
+					.attr('fill', function(d,i){return colorScale(i);})
+					.attr('width',(width - margin.left - margin.right)/data.data.length)
+					.attr('height',0);
+			///since the bar is drawn from top to bottom, you need to transition two properties.		
+			svg.selectAll('.bar')
+				.transition()
+				.duration(1000) //the duration change will bring very desirable animation!!
+				.ease('elastic')
+				.delay(function(d, i) {return i*2;})
+				.attr('height', function(d){
+						return height - yScale(d[1]) - margin.top - margin.bottom;})
+				.attr('y',function(d) {return yScale(d[1]);});
+			
+			/*transition to area chart*/
+			let area = d3.svg.area()
+							// .interpolate('monotone')
+							.x(function(d) {return xScale(d[0]);})
+							.y0(height-margin.top-margin.bottom)
+							.y1(height-margin.top-margin.bottom);
+
+			svg.append('path')
+				.datum(data.data)
+				.attr('class','area')
+				// .style('fill', 'url(#areaGradientFill)') //this also works
+				.attr('d',area);
+				
+			let line = d3.svg.line()
+							// .interpolate('monotone')
+							.x(function(d){return xScale(d[0]);})
+							.y(height - margin.top - margin.bottom);
+
+			svg.append('path')
+				.datum(data.data)
+				.attr('class','line')
+				.attr('d',line);
+
+			svg.append('g')
+				.attr('class','x axis')
+				.attr('transform','translate(0,'+ offsetXAxis +')')
+				.call(xAxis);
+			svg.append('g')
+				.attr('class','y axis')
+				.call(yAxis)
+				.append('text')
+				.attr('transform','rotate(-90)')
+				.attr('y',6)
+				.attr('dy', '.71em')
+				.style('text-anchor','end')
+				.text('GDP');
+		switchtoArea = function() {
+			let t = d3.transition().duration(1000).ease('bounce');
+			area.y1(function(d) {return yScale(d[1]);});
+			line.y(function(d){return yScale(d[1]);});	
+			t.selectAll('.bar')
+				.attr('y', function(d){
+					return height - margin.top - margin.bottom;})
+				.attr('height',0)
+				.call(endall, function() {
+					let t = d3.transition().duration(1000).ease('bounce');
+					///Question: why after moving the 't' outside the function, 
+					t.selectAll('.area')
+						.attr('d',area);
+					t.selectAll('.line')
+						.attr('d',line);
+				});
+	    }
+	    switchtoBar = function() {
+			let t = d3.transition().duration(1000).ease('bounce');
+			area.y1(height-margin.top-margin.bottom);
+			line.y(height-margin.top-margin.bottom);	
+			t.selectAll('.line')
+				.attr('d',line);
+			t.selectAll('.area')
+				.attr('d',area)
+				.call(endall, function() {
+					let t = d3.transition().duration(1000).ease('bounce');
+					///Question: why after moving the 't' outside the function, 
+					t.selectAll('.bar')
+						.delay(function(d, i) {return i*2;})
+						.attr('height', function(d){return height - yScale(d[1]) - margin.top - margin.bottom;})
+						.attr('y',function(d) {return yScale(d[1]);});
+							});
+	    }
+			});
+		}
+
+	    chart.data = function(value) {
+	        if (!arguments.length) return data;
+	        data = value;
+	        if (typeof updateData === 'function') updateData();
+	        return chart;
+	    };
+
+	    chart.switchtoArea = function() {
+	        if (typeof switchtoArea === 'function') switchtoArea();
+	        return chart;	    	
+	    }
+	    chart.switchtoBar = function(){
+	        if (typeof switchtoBar === 'function') switchtoBar();
+	        return chart;	    	    	
+	    }
+	    return chart;
+	}
+
+	function visualizeIt(data) {
+		let visualization = barAreaChart().data(data);
+		d3.select('body')
+			.append('g')
+			.call(visualization);
+
+		/* Toggle the heights of the two charts */
+		let state = 'bar';
+		$('#toggleButton').on('click', function(event){
+			if ('bar' === state) {
+				state = 'area';
+				visualization.switchtoArea();
+			}
+			else {
+				state = 'bar';
+				visualization.switchtoBar();
+			}
+		});
+		
+	}
+	</script>
+</body>
+
+</html>
+

@@ -35,13 +35,11 @@
 		<button id='toggleButton'>ShowOtherChart</button>
 	</section>
 	<script type="text/javascript">
-
 	d3.json("GDP-data.json", function(error, json) {
 	  if (error) return console.warn(error);
-	  data = json;
-	  visualizeIt();
+	  visualizeIt(json);
 	});
-	function visualizeIt() {
+	function visualizeIt(data) {
 		let format = d3.time.format('%Y-%m-%d'),
 			margin = {top: 200, right: 200, bottom: 200, left: 200},
 			width = window.innerWidth, 
@@ -51,7 +49,8 @@
 		}
 		let xScale = d3.time.scale()
 						.domain([d3.time.year(format.parse(data.from_date)),
-								d3.time.year.offset(d3.time.year(format.parse(data.to_date)),1)])
+								d3.time.year.offset(
+								d3.time.year(format.parse(data.to_date)),1)])
 						.range([0, width - margin.left - margin.right]);
 		// range band
 		// note that the array using this function is [0, length-1], exactly what you want
@@ -65,7 +64,8 @@
 						.domain([d3.max(data.data.map(function (d) {return d[1];})),0])
 						.range([0, height - margin.top - margin.bottom]);
 		let colorScale = d3.scale.linear()
-						.domain([0,data.data.length*0.33, data.data.length*0.66, data.data.length])
+						.domain([0,data.data.length*0.33, data.data.length*0.66,
+								 data.data.length])
 						.range(['#e63946','#a8dadc','#457b9d','#1d3557']);
 
 		let svg = d3.select('body')
@@ -75,8 +75,10 @@
 							'height': height,
 						})
 					.append('g')
-						.attr('transform', 'translate(' + margin.left + ',' + margin.top + ')');
-		///it is to be noted that directly translate svg does not work for Chrome, but appending a 'g' before translation works.
+						.attr('transform', 
+							  'translate(' + margin.left + ',' + margin.top + ')');
+		///it is to be noted that directly translate svg does not work for Chrome, 
+		// but appending a 'g' before translation works.
 		let xAxis = d3.svg.axis()
 						.scale(xScale)
 						.ticks(d3.time.years, 2)
@@ -121,7 +123,8 @@
 			.duration(1000) //the duration change will bring very desirable animation!!
 			.ease('elastic')
 			.delay(function(d, i) {return i*2;})
-			.attr('height', function(d){return height - yScale(d[1]) - margin.top - margin.bottom;})
+			.attr('height', function(d){
+					return height - yScale(d[1]) - margin.top - margin.bottom;})
 			.attr('y',function(d) {return yScale(d[1]);});
 		
 		/*transition to area chart*/
@@ -129,7 +132,8 @@
 						// .interpolate('monotone')
 						.x(function(d) {return xScale(d[0]);})
 						.y0(height-margin.top-margin.bottom)
-						.y1(function(d) {return yScale(d[1]);});
+						.y1(height-margin.top-margin.bottom);
+
 		svg.append('path')
 			.datum(data.data)
 			.attr('class','area')
@@ -139,27 +143,17 @@
 		let line = d3.svg.line()
 						// .interpolate('monotone')
 						.x(function(d){return xScale(d[0]);})
-						.y(function(d){return yScale(d[1]);});
+						.y(height - margin.top - margin.bottom);
+
 		svg.append('path')
 			.datum(data.data)
 			.attr('class','line')
 			.attr('d',line);
-		let t = d3.transition().duration(1000).ease('bounce');
 
-		area = d3.svg.area()
-						// .interpolate('monotone')
-						.x(function(d) {return xScale(d[0]);})
-						.y0(height-margin.top-margin.bottom)
-						.y1(height-margin.top-margin.bottom);
 
-		t.selectAll('.area')
-			.attr('d',area);
-		line = d3.svg.line()
-						// .interpolate('monotone')
-						.x(function(d){return xScale(d[0]);})
-						.y(height - margin.top - margin.bottom);
-		t.selectAll('.line')
-			.attr('d',line);
+
+
+		// add x and y axes.
 		svg.append('g')
 			.attr('class','x axis')
 			.attr('transform','translate(0,'+ offsetXAxis +')')
@@ -173,8 +167,54 @@
 			.attr('dy', '.71em')
 			.style('text-anchor','end')
 			.text('GDP');
+		/* Toggle the heights of the two charts */
+		let state = 'bar';
+		function endall(transition, callback) { 
+			if (transition.size() === 0) { callback() }
+			var n = 0; 
+				transition 
+				    .each(function() { ++n; }) 
+				    .each("end", function() { if (!--n) callback(); }); 
+		} 
 		$('#toggleButton').on('click', function(event){
-			
+			if ('bar' === state) {
+				state = 'area';
+				let t = d3.transition().duration(1000).ease('bounce');
+				area.y1(function(d) {return yScale(d[1]);});
+				line.y(function(d){return yScale(d[1]);});	
+				t.selectAll('.bar')
+					.attr('y', function(d){
+						return height - margin.top - margin.bottom;})
+					.attr('height',0)
+					.call(endall, function() {
+						let t = d3.transition().duration(1000).ease('bounce');
+						///Question: why after moving the 't' outside the function, 
+						t.selectAll('.area')
+							.attr('d',area);
+						t.selectAll('.line')
+							.attr('d',line);
+					});
+			}
+			else {
+				state = 'bar';
+				let t = d3.transition().duration(1000).ease('bounce');
+				area.y1(height-margin.top-margin.bottom);
+				line.y(height-margin.top-margin.bottom);	
+				t.selectAll('.line')
+					.attr('d',line);
+				t.selectAll('.area')
+					.attr('d',area)
+					.call(endall, function() {
+						let t = d3.transition().duration(1000).ease('bounce');
+						///Question: why after moving the 't' outside the function, 
+						t.selectAll('.bar')
+							.delay(function(d, i) {return i*2;})
+							.attr('height', function(d){return height - yScale(d[1]) - margin.top - margin.bottom;})
+							.attr('y',function(d) {return yScale(d[1]);});
+								});
+
+						
+			}
 		});
 		
 	}
